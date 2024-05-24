@@ -1,208 +1,229 @@
-import React, {useState} from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
-import Icon from 'react-native-vector-icons/Entypo';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Dimensions, Modal, ScrollView } from 'react-native';
 
-
-
-const {width,height} = Dimensions.get('window')
+const { width } = Dimensions.get('window');
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false);
-  const [currentNumber, setCurrentNumber] = useState('')
+  const [currentNumber, setCurrentNumber] = useState('');
   const [lastNumber, setLastNumber] = useState('');
   const [lastButtonPressed, setLastButtonPressed] = useState('');
-  const buttons = ['C', 'DEL', '/', 7, 8, 9, '*', 4, 5, 6, '-', 1, 2, 3, '+', 0, '.', '='];
+  const [history, setHistory] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newCalculation, setNewCalculation] = useState(false); // Track if the last button pressed was =
+
+  const buttons = [
+    'C', 'DEL', 'π', 'x^2',
+    7, 8, 9, '/',
+    4, 5, 6, '*',
+    1, 2, 3, '-',
+    0, '.', '=', '+',
+    'HISTORY' // Add the history button
+  ];
 
   const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#ffffff',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     results: {
-      backgroundColor: darkMode ? '#282f3b' : '#f5f5f5',
-      maxWidth: '100%',
-      minHeight: '35%',
-      alignItems: 'flex-end',
+      flexDirection: 'column',
       justifyContent: 'flex-end',
+      alignItems: 'flex-end',
+      padding: 20,
+      width: '100%',
     },
     resultText: {
-      maxHeight: 45,
-      color: '#FF6666',
-      margin: 15,
-      fontSize: 35,
+      color: '#000000',
+      fontSize: 40,
     },
     historyText: {
-      color: darkMode ? '#B5B7BB' : '#7c7c7c',
+      color: '#7c7c7c',
       fontSize: 20,
-      marginRight: 10,
-      alignSelf: 'flex-end',
     },
-    themeButton: {
-      alignSelf: 'flex-start',
-      bottom: '5%',
-      margin: 15,
-      backgroundColor: darkMode ? '#7b8084' : '#e5e5e5',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-    },
-    buttons: {
-      width: '100%',
-      height: '35%',
+    buttonsContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
+      marginTop: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
     },
     button: {
-      borderColor: darkMode ? '#3f4d5b' : '#e5e5e5',
       alignItems: 'center',
       justifyContent: 'center',
-      minWidth: '24%',
-      minHeight: '54%',
-      flex: 2,
+      width: width * 0.2,
+      height: width * 0.2,
+      borderRadius: width * 0.1,
+      backgroundColor: '#e6e6e6',
+      margin: width * 0.02,
     },
-    textButton: {
-      color: darkMode ? '#b5b7bb' : '#7c7c7c',
+    longButton: {
+      width: width * 0.44 + width * 0.04, // Span the width of two normal buttons plus margin
+      height: width * 0.2,
+      borderRadius: width * 0.1,
+      backgroundColor: '#FF6666', // Same color as C and DEL
+      margin: width * 0.02,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    buttonText: {
       fontSize: 28,
-    }
-  })
+      color: '#000000',
+    },
+    modalView: {
+      margin: 20,
+      backgroundColor: 'white',
+      borderRadius: 20,
+      padding: 35,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    closeButton: {
+      backgroundColor: '#FF6666',
+      borderRadius: 20,
+      padding: 10,
+      elevation: 2,
+    },
+    closeButtonText: {
+      color: 'white',
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+    historyItem: {
+      fontSize: 18,
+      marginVertical: 5,
+    },
+  });
 
   const handleInput = (btnPressed) => {
-
-    btnPressed = btnPressed.toString()
-
+    btnPressed = btnPressed.toString();
+  
     switch (btnPressed) {
       case 'DEL':
-        setCurrentNumber(currentNumber.substring(0, (currentNumber.length - 1)))
-        setLastButtonPressed(btnPressed)
-        return
+        setCurrentNumber(currentNumber.substring(0, currentNumber.length - 1));
+        setLastButtonPressed(btnPressed);
+        setNewCalculation(false);
+        break;
       case 'C':
         setLastNumber('');
         setCurrentNumber('');
-        setLastButtonPressed(btnPressed)
-        return
+        setLastButtonPressed(btnPressed);
+        setNewCalculation(false);
+        break;
       case '=':
         setLastNumber(currentNumber);
-        setLastButtonPressed(btnPressed)
-        calculate()
-        return;
-    }
-    
-    if (lastButtonPressed === '=') {
-      if (currentNumber.length > 0) {
-        const lastChar = currentNumber[currentNumber.length-1]
-
-        if (lastChar !== '+' && lastChar !== '/' && lastChar !== '*' && lastChar !== '.' && lastChar !== '-') {
-          if (btnPressed !== '+' && btnPressed !== '/' && btnPressed !== '*' && btnPressed !== '.' && btnPressed !== '-') {
-            setCurrentNumber(btnPressed)
+        setLastButtonPressed(btnPressed);
+        calculate();
+        setNewCalculation(true);
+        break;
+      case 'x^2':
+        setCurrentNumber((prev) => (Math.pow(parseFloat(prev), 2)).toString());
+        setLastButtonPressed(btnPressed);
+        setNewCalculation(true);
+        break;
+      case 'π':
+        setCurrentNumber((prev) => prev + Math.PI.toString());
+        setLastButtonPressed(btnPressed);
+        setNewCalculation(false);
+        break;
+      case 'HISTORY':
+        setModalVisible(true);
+        break;
+      default:
+        if (newCalculation && !isNaN(btnPressed)) {
+          setCurrentNumber(btnPressed);
+          setNewCalculation(false);
+        } else {
+          // Check if the last button pressed was an operator
+          const lastButtonIsOperator = ['/', '*', '-', '+'].includes(lastButtonPressed);
+          if (lastButtonIsOperator && ['/', '*', '-', '+'].includes(btnPressed)) {
+            // Replace the previous operator with the new one
+            setCurrentNumber((prev) => prev.substring(0, prev.length - 1) + btnPressed);
           } else {
-            setCurrentNumber(currentNumber + btnPressed)
+            setCurrentNumber((prev) => prev + btnPressed);
           }
         }
-      }
-    
-      setLastButtonPressed(btnPressed)
-
-      return
-    }
-
-    if (currentNumber.length == 0) {
-      if (btnPressed !== '+' && btnPressed !== '-' && btnPressed !== '*' && btnPressed !== '/' && btnPressed !== '=' && btnPressed !== '.' && btnPressed !== 'DEL' && btnPressed !== 'C') {
-        setCurrentNumber(currentNumber + btnPressed)
-      }
-      return
-    } else {
-
-      const lastChar = currentNumber[currentNumber.length-1]
-
-      if (lastChar === '+' || lastChar === '-' || lastChar === '/' || lastChar == '*') {
-        if (btnPressed === '+' || btnPressed === '-' || btnPressed === '/' || btnPressed === '*') {
-          setCurrentNumber(currentNumber.substring(0,currentNumber.length-1) + btnPressed)
-        } else {
-          setCurrentNumber(currentNumber + btnPressed)
-          return
+        setLastButtonPressed(btnPressed);
+        if (['/', '*', '-', '+'].includes(btnPressed)) {
+          setNewCalculation(false);
         }
-      }
-
+        break;
     }
-
-    if (currentNumber.length == 0) {
-      if (btnPressed !== '+' || btnPressed !== '-' || btnPressed !== '/' || btnPressed !== '*' || btnPressed !== '=' || btnPressed !== '.') {
-        setCurrentNumber(currentNumber + btnPressed)
-      }
-    } else {
-
-      const lastCharacter = currentNumber[currentNumber.length-1]
-
-      if (lastCharacter === '+' || lastCharacter === '-' || lastCharacter === '/' || lastCharacter === '.' || lastCharacter === '*' || lastCharacter === '=') {
-        if (btnPressed !== '+' && btnPressed !== '-' && btnPressed !== '*' && btnPressed !== '/' && btnPressed !== '=' && btnPressed !== '.') {
-          setCurrentNumber(currentNumber + btnPressed)
-        }
-        return
-      } else {
-        // console.log(typeof btnPressed, typeof currentNumber)
-        setCurrentNumber(currentNumber + btnPressed)
-      }
-    }
-    
-  }
+  };
+  
 
   const calculate = () => {
-    let lastArr = currentNumber[currentNumber.length - 1]
-    if (lastArr === '/' || lastArr === '*' || lastArr === '-' || lastArr === '+' || lastArr === '.') {
+    let lastArr = currentNumber[currentNumber.length - 1];
+    if (['/', '*', '-', '+', '.'].includes(lastArr)) {
       setCurrentNumber(currentNumber);
-    }
-    else {
+    } else {
       let result = eval(currentNumber).toString();
+      setHistory((prevHistory) => [...prevHistory, `${currentNumber} = ${result}`]);
       setCurrentNumber(result);
-      return;
     }
-  }
+  };
 
   return (
-    <View>
+    <View style={styles.container}>
       <View style={styles.results}>
-        <TouchableOpacity style={styles.themeButton}>
-          <Icon name={darkMode ? 'light-up' : 'moon'} size={24}
-            color={darkMode ? 'white' : 'black'}
-            onPress={() => darkMode ? setDarkMode(false) : setDarkMode(true)}
-          />
-        </TouchableOpacity>
         <Text style={styles.historyText}>{lastNumber}</Text>
         <Text style={styles.resultText}>{currentNumber}</Text>
       </View>
-      <View style={styles.buttons}>
-        {buttons.map((btn) =>
-          btn === '=' || btn === '/' || btn === '*' || btn === '-' || btn === '+' ?
-            <TouchableOpacity key={btn} style={[styles.button, { backgroundColor: '#FF6666' }]} onPress={() => handleInput(btn)}>
-              <Text style={[styles.textButton, { color: 'white', fontSize: 28 }]}>{btn}</Text>
+      <View style={styles.buttonsContainer}>
+        {buttons.map((btn, index) => {
+          const isOperationButton = ['/', '*', '-', '+', 'π', 'x^2'].includes(btn);
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                btn === 'HISTORY' ? styles.longButton : styles.button,
+                btn === 'C' || btn === 'DEL' || btn === '=' || btn === 'HISTORY' ? { backgroundColor: '#FF6666' } : null,
+                isOperationButton ? { backgroundColor: '#FFA500' } : null // Orange color for operation buttons
+              ]}
+              onPress={() => handleInput(btn)}
+            >
+              <Text style={[
+                styles.buttonText,
+                btn === 'C' || btn === 'DEL' || btn === '=' || btn === 'HISTORY' ? { color: '#ffffff' } : null
+              ]}>
+                {btn}
+              </Text>
             </TouchableOpacity>
-            : btn === 0 ?
-              <TouchableOpacity key={btn} style={[styles.button, {
-                backgroundColor: typeof (btn) === 'number' ?
-                  darkMode ? '#303946' : '#fff' : darkMode === true ? '#414853' : '#ededed', minWidth: '36%'
-              }]} onPress={() => handleInput(btn)}>
-                <Text style={styles.textButton}>{btn}</Text>
-              </TouchableOpacity>
-              : btn === '.' || btn === 'DEL' ?
-                <TouchableOpacity key={btn} style={[styles.button, { backgroundColor: btn === '.' ? darkMode ? '#303946' : '#fff' : darkMode === true ? '#414853' : '#ededed', minWidth: '37%' }]}
-                  onPress={() => handleInput(btn)}
-                >
-                  <Text style={styles.textButton}>{btn}</Text>
-                </TouchableOpacity>
-                : btn === 'C' ?
-                  <TouchableOpacity key={btn} style={[styles.button, { backgroundColor: typeof (btn) === 'number' ? darkMode ? '#303946' : '#fff' : darkMode === true ? '#414853' : '#ededed', minWidth: '36%' }]}
-                    onPress={() => handleInput(btn)}
-                  >
-                    <Text style={styles.textButton}>{btn}</Text>
-                  </TouchableOpacity>
-                  :
-                  <TouchableOpacity key={btn} style={[styles.button, { backgroundColor: typeof (btn) === 'number' ? darkMode ? '#303946' : '#fff' : darkMode === true ? '#414853' : '#ededed' }]}
-                    onPress={() => handleInput(btn)}
-                  >
-                    <Text style={styles.textButton}>{btn}</Text>
-                  </TouchableOpacity>
-
-        )}
+          );
+        })}
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}
+      >
+        <View style={styles.modalView}>
+          <ScrollView>
+            {history.map((item, index) => (
+              <Text key={index} style={styles.historyItem}>{item}</Text>
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setModalVisible(!modalVisible)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
-  )
+  );
 }
